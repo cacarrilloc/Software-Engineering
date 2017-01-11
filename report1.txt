@@ -1,0 +1,148 @@
+Carlos Carrillo-Calderon11/01/2016OSU-CS362Assignment 5
+
+
+Blackjack game bug report #1
+Title:     	“DOUBLE DOWN ACTION IS ACCEPTED WHEN THE PLAYER HAS NO CARDS AT ALL”
+
+Class:		“Logic error”
+
+Date:           11/01/2016
+Reported By:    Carlos Carrillo-Calderon
+Email:      	carilca@oregonstate.edu
+
+
+Product:     	 Mockito                  Version: 1.8
+Platform:        MacOS Sierra             Version: 10.12.1       
+
+Reproducible:    Yes. Every time.
+
+Description
+===========
+The player is allowed to double down without taking the very first card from the dealer. This action is obviously not allowed by the game rules since it’s impossible to double down over nothing. Even though this is a non-sense action, the program passes the Maven test and reaches a BUILD SUCCESS, so the bug is not detected by the unit test.
+
+
+Steps to Produce/Reproduce
+--------------------------
+
+1) Create a Mockito test class called “MockBlackjackTest” and then a test function within this class:
+
+	public class MockBlackjackTest {
+    		@Test
+    		public void blackJackMock1(){
+
+2) Create a DealerAction and a PlayerAction object within the test function:
+
+	DealerAction dt = mock(DealerAction.class);
+        PlayerAction pa = mock(PlayerAction.class);
+
+3) Execute the DOUBLE PlayerAction:
+
+	when(pa.getAction()).thenReturn(PlayerAction.ActionType.DOUBLE);
+
+4) Create a SimpleBlackjack object and use it to instantiate playRound():
+
+	SimpleBlackjack j = new SimpleBlackjack(dt, new PlayerAction[]{pa});
+        j.playRound();
+
+5) Finally, call the verify function to check if the number of cards played is correct:
+
+	verify(dt, times(2)).dealCard(pa);
+
+The whole test class should look like something similar to this:
+
+	public class MockBlackjackTest {
+    
+   		 @Test
+    		public void blackJackMock(){
+         
+        		DealerAction dt = mock(DealerAction.class);
+         		PlayerAction pa = mock(PlayerAction.class);
+     
+         		when(pa.getAction()).thenReturn(PlayerAction.ActionType.DOUBLE);
+     
+         		SimpleBlackjack j = new SimpleBlackjack(dt, new PlayerAction[]{pa});
+         		j.playRound();
+     
+         		verify(dt, times(2)).dealCard(pa);
+    		}
+	}
+
+Expected Results
+----------------
+Ideally, an error, or warning, message should be expected, telling the user that particular action can be performed by the program. In terms of the testing unit, it should throw an error or built failure like this:
+
+	Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 sec - in 
+	edu.osu.blackjack.CardTest
+	
+	Results :
+
+	Failed tests: 
+ 	 MockBlackjackTest.blackJackMock2:55 
+	dealerAction.dealCard(
+    	Mock for PlayerAction, hashCode: 1709366259
+	);
+
+	Tests run: 8, Failures: 1, Errors: 0, Skipped: 0
+
+	[INFO] ------------------------------------------------------------------------
+	[INFO] BUILD FAILURE
+	[INFO] ------------------------------------------------------------------------
+	[INFO] Total time: 7.016s
+	[INFO] Finished at: Tue Nov 01 15:43:12 PDT 2016
+	[INFO] Final Memory: 26M/1158M
+	[INFO] ------------------------------------------------------------------------
+	[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:2.19:test (default-	test) on project hw3: There are test failures.
+
+
+Actual Results
+--------------
+Instead, the test runs smoothly and throws no errors at all:
+
+	Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 sec - in 
+	edu.osu.blackjack.CardTest
+
+	Results :
+
+	Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+
+	[INFO] ------------------------------------------------------------------------
+	[INFO] BUILD SUCCESS
+	[INFO] ------------------------------------------------------------------------
+	[INFO] Total time: 4.111s
+	[INFO] Finished at: Tue Nov 01 15:48:38 PDT 2016
+	[INFO] Final Memory: 23M/1104M
+	[INFO] ------------------------------------------------------------------------
+
+
+Workarounds
+-----------
+Since this bug doesn’t interfere with the program functionality but with the program functionality, a Workaround has to be made in SimpleBlackjack. Thus, a line of code has to be added within the switch case from playRound() in order to make the dealer hits a card before any DOUBLE action in case the player has no cards yet:
+
+	switch(a){
+                    case HIT:
+                        dealer.dealCard(p);
+                        break;
+
+                    case DOUBLE:
+                        //Modification made to pass blackJackMock3()
+                        //Make dealer hit a card before the DOUBLE action
+                        //in case the player has no cards yet.
+                        dealer.dealCard(p);
+                        
+                        //Code as is
+                        p.doubleDownBet();
+                        dealer.dealCard(p);
+                        turnOver = true;
+                        break;
+
+                    default: // stand
+                        turnOver = true;
+                        break;
+                }
+
+
+Attachments
+-----------
+No Attachments required for this particular school analysis/report.
+
+
